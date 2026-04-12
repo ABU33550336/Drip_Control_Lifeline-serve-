@@ -1,10 +1,4 @@
 const axios = require('axios');
-const express = require('express');
-const cors = require('cors');
-
-const app = express();
-app.use(express.json());
-app.use(cors());
 
 const HUAWEI_CONFIG = {
   accountName: process.env.HUAWEI_ACCOUNT_NAME || 'your-email@example.com',
@@ -59,76 +53,80 @@ async function getHuaweiToken() {
 
 const BASE_URL = `https://${HUAWEI_CONFIG.apiEndpoint}/v5/iot/${HUAWEI_CONFIG.projectId}`;
 
-app.get('/api/device/status', async (req, res) => {
-  try {
-    const token = await getHuaweiToken();
-    const url = `${BASE_URL}/devices/${HUAWEI_CONFIG.deviceId}/properties?service_id=infusion`;
-    
-    const response = await axios.get(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Auth-Token': token
-      }
-    });
+module.exports = async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
-    if (response.status === 200) {
-      const data = response.data.response || {};
-      const services = data.services || [];
-      if (services.length === 0) {
-        return res.json({ success: true, data: {} });
+  const path = req.url;
+
+  try {
+    if (path === '/api/device/status' || path.startsWith('/api/device/status')) {
+      const token = await getHuaweiToken();
+      const url = `${BASE_URL}/devices/${HUAWEI_CONFIG.deviceId}/properties?service_id=infusion`;
+      
+      const response = await axios.get(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Auth-Token': token
+        }
+      });
+
+      if (response.status === 200) {
+        const data = response.data.response || {};
+        const services = data.services || [];
+        if (services.length === 0) {
+          return res.json({ success: true, data: {} });
+        }
+        return res.json({ success: true, data: services[0].properties || {} });
+      } else {
+        return res.json({ success: false, error: `API错误: ${response.status}` });
       }
-      return res.json({ success: true, data: services[0].properties || {} });
-    } else {
-      return res.json({ success: false, error: `API错误: ${response.status}` });
+    } 
+    else if (path === '/api/device/command' || path.startsWith('/api/device/command')) {
+      const token = await getHuaweiToken();
+      const { command, param, hrMin, hrMax, dripMin, dripMax } = req.body || {};
+      const url = `${BASE_URL}/devices/${HUAWEI_CONFIG.deviceId}/commands`;
+
+      let body = {};
+      if (command === 'set_speed' && param !== null) {
+        body = {
+          service_id: 'control',
+          command_name: 'control',
+          paras: { command: 'set_speed', speed: param }
+        };
+      } else if (command === 'set_threshold') {
+        body = {
+          service_id: 'control',
+          command_name: 'control',
+          paras: { hr_min: hrMin, hr_max: hrMax, drip_min: dripMin, drip_max: dripMax }
+        };
+      } else {
+        body = {
+          service_id: 'control',
+          command_name: 'control',
+          paras: { command: command }
+        };
+      }
+
+      const response = await axios.post(url, body, {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Auth-Token': token
+        }
+      });
+
+      return res.json({ success: response.status === 200, data: response.data });
+    } 
+    else {
+      return res.json({ success: false, error: '未知路径' });
     }
   } catch (error) {
-    console.error('获取状态错误:', error.message);
+    console.error('请求错误:', error.message);
     return res.json({ success: false, error: error.message });
   }
-});
-
-app.post('/api/device/command', async (req, res) => {
-  try {
-    const token = await getHuaweiToken();
-    const { command, param, hrMin, hrMax, dripMin, dripMax } = req.body;
-    const url = `${BASE_URL}/devices/${HUAWEI_CONFIG.deviceId}/commands`;
-
-    let body = {};
-    if (command === 'set_speed' && param !== null) {
-      body = {
-        service_id: 'control',
-        command_name: 'control',
-        paras: { command: 'set_speed', speed: param }
-      };
-    } else if (command === 'set_threshold') {
-      body = {
-        service_id: 'control',
-        command_name: 'control',
-        paras: { hr_min: hrMin, hr_max: hrMax, drip_min: dripMin, drip_max: dripMax }
-      };
-    } else {
-      body = {
-        service_id: 'control',
-        command_name: 'control',
-        paras: { command: command }
-      };
-    }
-
-    const response = await axios.post(url, body, {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Auth-Token': token
-      }
-    });
-
-    return res.json({ success: response.status === 200, data: response.data });
-  } catch (error) {
-    console.error('发送命令错误:', error.message);
-    return res.json({ success: false, error: error.message });
-  }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`服务器运行在端口 ${PORT}`);
-});
+};
