@@ -1,4 +1,4 @@
-module.exports = (req, res) => {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.json({ message: 'API working', path: req.url });
-};
+  res.status(200).json({ message: 'API working', path: req.url });
+}
