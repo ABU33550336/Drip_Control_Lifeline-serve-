@@ -43,7 +43,7 @@ function generateSignature(method, path, query, headers, body, timestamp) {
   ].join('\n');
 
   const algorithm = 'SDK-HMAC-SHA256';
-  const date = timestamp.substring(0, 8);
+  const date = timestamp.split('T')[0].replace(/-/g, '');
   const credentialScope = `${date}/default/sdk_request`;
 
   const hashedCanonicalRequest = crypto.createHash('sha256').update(canonicalRequest).digest('hex');
