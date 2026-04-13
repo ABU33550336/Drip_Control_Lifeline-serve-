@@ -7,18 +7,18 @@ const PROJECT_ID = process.env.HUAWEI_PROJECT_ID;
 const DEVICE_ID = process.env.HUAWEI_DEVICE_ID;
 const IOTDA_ENDPOINT = process.env.HUAWEI_IOTDA_ENDPOINT;
 
-function generateSignature(method, path, headers, body) {
-  const sortedHeaders = Object.keys(headers).sort()
+function generateSignature(method, path, headers, body, timestamp) {
+  const sortedHeaders = Object.keys(headers)
     .filter(k => k.toLowerCase().startsWith('x-') || k.toLowerCase() === 'host')
+    .sort()
     .reduce((obj, k) => ({ ...obj, [k]: headers[k] }), {});
 
-  const headerStr = Object.entries(sortedHeaders)
-    .map(([k, v]) => `${k.toLowerCase()}:${v}`)
+  const headerStr = Object.keys(sortedHeaders)
+    .map(k => `${k.toLowerCase()}:${sortedHeaders[k]}`)
     .join('\n');
 
-  const bodyHash = crypto.createHash('sha256')
-    .update(body || '')
-    .digest('hex');
+  const bodyStr = body ? JSON.stringify(body) : '';
+  const bodyHash = crypto.createHash('sha256').update(bodyStr).digest('hex');
 
   const signedHeaders = Object.keys(sortedHeaders).map(k => k.toLowerCase()).join(';');
 
@@ -32,7 +32,6 @@ function generateSignature(method, path, headers, body) {
   ].join('\n');
 
   const algorithm = 'SDK-HMAC-SHA256';
-  const timestamp = headers['X-Sdk-Date'];
   const date = timestamp.substring(0, 8);
   const credentialScope = `${date}/default/sdk_request`;
 
@@ -46,7 +45,6 @@ function generateSignature(method, path, headers, body) {
   const kDate = crypto.createHmac('sha256', SK).update(date).digest();
   const kService = crypto.createHmac('sha256', kDate).update('iotda').digest();
   const kSigning = crypto.createHmac('sha256', kService).update('sdk_request').digest();
-
   const signature = crypto.createHmac('sha256', kSigning).update(stringToSign).digest('hex');
 
   return `${algorithm} Credential=${AK}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
@@ -66,7 +64,8 @@ function huaweiRequest(method, path, body = null) {
       'X-Sdk-Date': timestamp
     };
 
-    const signature = generateSignature(method, path, headers, body);
+    const bodyStr = body ? JSON.stringify(body) : '';
+    const signature = generateSignature(method, path, headers, body, timestamp);
     headers['Authorization'] = signature;
 
     const options = {
@@ -93,7 +92,7 @@ function huaweiRequest(method, path, body = null) {
       });
     });
     req.on('error', reject);
-    if (body) req.write(JSON.stringify(body));
+    if (body) req.write(bodyStr);
     req.end();
   });
 }
