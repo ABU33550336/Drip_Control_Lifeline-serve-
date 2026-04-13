@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vercel dev"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "@huaweicloud/huaweicloud-sdk-core": "^3.1.0",
+    "@huaweicloud/huaweicloud-sdk-iotda": "^3.1.0"
+  }
 }
