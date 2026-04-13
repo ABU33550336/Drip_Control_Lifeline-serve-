@@ -1,5 +1,8 @@
 {
   "name": "drip-control-lifeline-backend",
   "version": "1.0.0",
-  "dependencies": {}
+  "dependencies": {
+    "@huaweicloud/huaweicloud-sdk-core": "^3.1.0",
+    "@huaweicloud/huaweicloud-sdk-iotda": "^3.1.0"
+  }
 }
