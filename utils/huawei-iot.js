@@ -46,11 +46,13 @@ function generateSignature(method, path, query, headers, body, timestamp) {
   const date = timestamp.substring(0, 8);
   const credentialScope = `${date}/default/sdk_request`;
 
+  const hashedCanonicalRequest = crypto.createHash('sha256').update(canonicalRequest).digest('hex');
+
   const stringToSign = [
     algorithm,
     timestamp,
     credentialScope,
-    crypto.createHash('sha256').update(canonicalRequest).digest('hex')
+    hashedCanonicalRequest
   ].join('\n');
 
   const derivedKey = crypto.createHmac('sha256', SK).update('DefaultDerivedSignKey').digest();
@@ -58,6 +60,14 @@ function generateSignature(method, path, query, headers, body, timestamp) {
   const kService = crypto.createHmac('sha256', kDate).update('iotda').digest();
   const kSigning = crypto.createHmac('sha256', kService).update('sdk_request').digest();
   const signature = crypto.createHmac('sha256', kSigning).update(stringToSign).digest('hex');
+
+  console.log('=== 签名调试信息 ===');
+  console.log('CanonicalRequest:\n' + canonicalRequest);
+  console.log('HashedCanonicalRequest:', hashedCanonicalRequest);
+  console.log('StringToSign:\n' + stringToSign);
+  console.log('Signature:', signature);
+  console.log('Authorization:', `${algorithm} Credential=${AK}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`);
+  console.log('=====================');
 
   return `${algorithm} Credential=${AK}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 }
