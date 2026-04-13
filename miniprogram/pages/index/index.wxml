@@ -1,0 +1,97 @@
+<view class="container">
+  <view class="header">
+    <text class="title">滴控生命线</text>
+    <text class="subtitle">智能输液监护系统</text>
+  </view>
+
+  <view class="data-box">
+    <text class="section-title">实时数据</text>
+    <view class="data-row">
+      <view class="data-item">
+        <text class="data-label">心率</text>
+        <text class="data-value">{{heartRate}}</text>
+        <text class="data-unit">BPM</text>
+      </view>
+      <!-- 为滴速项添加专属类 drip-item -->
+      <view class="data-item drip-item">
+        <text class="data-label">滴速</text>
+        <text class="data-value">{{dripRate}}</text>
+        <text class="data-unit">滴/分</text>
+      </view>
+    </view>
+    <view class="data-row">
+      <view class="data-item">
+        <text class="data-label">剩余药量</text>
+        <text class="data-value">{{bottleRemain}}</text>
+        <text class="data-unit">%</text>
+      </view>
+      <view class="data-item">
+        <text class="data-label">剩余瓶数</text>
+        <text class="data-value">{{bottleCount}}</text>
+      </view>
+    </view>
+    <view class="alarm-box" wx:if="{{alarm}}">
+      <text class="alarm-text">⚠️ 警告！</text>
+    </view>
+  </view>
+
+  <view class="chart-box">
+    <text class="section-title">心率曲线</text>
+    <canvas type="2d" id="heartCanvas" class="canvas" bindready="onCanvasReady"></canvas>
+  </view>
+
+  <view class="control-box">
+    <text class="section-title">控制面板</text>
+    <view class="btn-grid">
+      <button class="btn" bindtap="start">启动</button>
+      <button class="btn btn-red" bindtap="pause">暂停</button>
+      <button class="btn" bindtap="switchBottle">换瓶</button>
+    </view>
+    <view class="btn-grid">
+      <button class="btn" bindtap="clearAlarm">消音</button>
+      <button class="btn" bindtap="refresh">刷新</button>
+    </view>
+  </view>
+
+  <view class="threshold-box">
+    <text class="section-title">阈值设置</text>
+    <view class="threshold-row">
+      <text>心率下限</text>
+      <input type="number" model:value="{{hrMin}}" placeholder="60" />
+      <text>BPM</text>
+    </view>
+    <view class="threshold-row">
+      <text>心率上限</text>
+      <input type="number" model:value="{{hrMax}}" placeholder="120" />
+      <text>BPM</text>
+    </view>
+    <view class="threshold-row">
+      <text>滴速下限</text>
+      <input type="number" model:value="{{dripMin}}" placeholder="20" />
+      <text>滴/分</text>
+    </view>
+    <view class="threshold-row">
+      <text>滴速上限</text>
+      <input type="number" model:value="{{dripMax}}" placeholder="60" />
+      <text>滴/分</text>
+    </view>
+    <button class="btn" bindtap="saveThreshold">保存设置</button>
+  </view>
+
+  <view class="speed-box">
+    <text class="section-title">滴速调节</text>
+    <view class="threshold-row">
+      <text>目标滴速</text>
+      <input type="number" model:value="{{targetSpeed}}" min="10" max="150" placeholder="60" />
+      <text>滴/分</text>
+    </view>
+    <button class="btn" bindtap="setSpeed">设置滴速</button>
+  </view>
+
+  <view class="log-box">
+    <text class="section-title">报警记录</text>
+    <scroll-view scroll-y class="log-scroll" enhanced show-scrollbar="{{false}}">
+      <view wx:for="{{logList}}" wx:key="*this" class="log-item">{{item}}</view>
+    </scroll-view>
+  </view>
+</view>

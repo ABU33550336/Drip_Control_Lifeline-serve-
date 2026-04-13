@@ -1,0 +1,11 @@
+{
+  "name": "drip-control-lifeline",
+  "version": "1.0.0",
+  "description": "Backend API for WeChat Mini Program connected to Huawei Cloud IoTDA",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
