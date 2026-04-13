@@ -7,7 +7,18 @@ const PROJECT_ID = process.env.HUAWEI_PROJECT_ID;
 const DEVICE_ID = process.env.HUAWEI_DEVICE_ID;
 const IOTDA_ENDPOINT = process.env.HUAWEI_IOTDA_ENDPOINT;
 
-function generateSignature(method, path, headers, body, timestamp) {
+function canonicalQueryString(query) {
+  if (!query || Object.keys(query).length === 0) return '';
+  return Object.keys(query)
+    .sort()
+    .map(k => `${encodeURIComponent(k)}=${encodeURIComponent(query[k])}`)
+    .join('&');
+}
+
+function generateSignature(method, path, query, headers, body, timestamp) {
+  const canonicalUri = path;
+  const canonicalQuery = canonicalQueryString(query);
+
   const sortedHeaders = Object.keys(headers)
     .filter(k => k.toLowerCase().startsWith('x-') || k.toLowerCase() === 'host')
     .sort()
@@ -24,8 +35,8 @@ function generateSignature(method, path, headers, body, timestamp) {
 
   const canonicalRequest = [
     method.toUpperCase(),
-    path,
-    '',
+    canonicalUri,
+    canonicalQuery,
     headerStr,
     signedHeaders,
     bodyHash
@@ -43,7 +54,6 @@ function generateSignature(method, path, headers, body, timestamp) {
   ].join('\n');
 
   const derivedKey = crypto.createHmac('sha256', SK).update('DefaultDerivedSignKey').digest();
-
   const kDate = crypto.createHmac('sha256', derivedKey).update(date).digest();
   const kService = crypto.createHmac('sha256', kDate).update('iotda').digest();
   const kSigning = crypto.createHmac('sha256', kService).update('sdk_request').digest();
@@ -52,7 +62,7 @@ function generateSignature(method, path, headers, body, timestamp) {
   return `${algorithm} Credential=${AK}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
 }
 
-function huaweiRequest(method, path, body = null) {
+function huaweiRequest(method, path, query = null, body = null) {
   return new Promise((resolve, reject) => {
     if (!AK || !SK || !PROJECT_ID || !DEVICE_ID || !IOTDA_ENDPOINT) {
       reject(new Error('环境变量缺失'));
@@ -67,13 +77,16 @@ function huaweiRequest(method, path, body = null) {
     };
 
     const bodyStr = body ? JSON.stringify(body) : '';
-    const signature = generateSignature(method, path, headers, body, timestamp);
+    const signature = generateSignature(method, path, query, headers, body, timestamp);
     headers['Authorization'] = signature;
+
+    const queryStr = canonicalQueryString(query);
+    const fullPath = queryStr ? `${path}?${queryStr}` : path;
 
     const options = {
       hostname: IOTDA_ENDPOINT,
       port: 443,
-      path: path,
+      path: fullPath,
       method: method,
       headers: headers
     };
@@ -100,8 +113,9 @@ function huaweiRequest(method, path, body = null) {
 }
 
 async function queryDeviceProperties() {
-  const path = `/v5/iot/${PROJECT_ID}/devices/${DEVICE_ID}/properties?service_id=infusion`;
-  return huaweiRequest('GET', path);
+  const path = `/v5/iot/${PROJECT_ID}/devices/${DEVICE_ID}/properties`;
+  const query = { service_id: 'infusion' };
+  return huaweiRequest('GET', path, query);
 }
 
 async function sendDeviceCommand(command, param) {
@@ -120,7 +134,7 @@ async function sendDeviceCommand(command, param) {
     paras: paras
   };
 
-  return huaweiRequest('POST', path, body);
+  return huaweiRequest('POST', path, null, body);
 }
 
 module.exports = { queryDeviceProperties, sendDeviceCommand };
