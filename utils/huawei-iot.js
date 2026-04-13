@@ -25,10 +25,9 @@ function getClient() {
 
 async function queryDeviceProperties() {
   const client = getClient();
-  const request = new iotda.ListDevicePropertiesRequest();
+  const request = new iotda.ShowDeviceRequest();
   request.deviceId = deviceId;
-  request.serviceId = 'infusion';
-  const response = await client.listDeviceProperties(request);
+  const response = await client.showDevice(request);
   return response;
 }
 
